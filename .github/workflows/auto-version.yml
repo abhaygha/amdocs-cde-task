@@ -20,8 +20,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag-prefix: 'v'
-        commit-message: 'chore: bump version to {{version}} [skip ci]'
-        default: 'patch'
     
     - name: Auto Create Release
       uses: actions/create-release@v1
