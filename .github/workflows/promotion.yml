@@ -1,28 +1,72 @@
-name: Promote to Staging and Production
+name: Automated Environment Promotion
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [ main ]
+  workflow_run:
+    workflows: ["Automated Versioning"]
+    types: [ completed ]
 
 jobs:
-  promote-staging:
+  auto-promote-dev:
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Auto Deploy to Dev
+      run: |
+        echo "Automatically deploying to development environment"
+        # Terraform apply to dev
+        terraform init
+        terraform apply -auto-approve -var-file=environments/dev.tfvars
+    
+    - name: Auto Deploy to Coder Dev
+      env:
+        CODER_URL: ${{ secrets.CODER_DEV_URL }}
+        CODER_TOKEN: ${{ secrets.CODER_DEV_TOKEN }}
+      run: |
+        coder templates push --yes
+        coder create workspace --template=dev-template --name=auto-dev-${{ github.sha }}
+
+  auto-promote-staging:
+    needs: auto-promote-dev
     runs-on: ubuntu-latest
     environment: staging
     steps:
-      - uses: actions/checkout@v3
-      - name: Deploy to Staging
-        run: |
-          # Add your deployment script/command here
-          echo "Deploying to staging environment..."
+    - uses: actions/checkout@v3
+    
+    - name: Auto Deploy to Staging
+      run: |
+        echo "Automatically promoting to staging environment"
+        terraform init
+        terraform apply -auto-approve -var-file=environments/staging.tfvars
+    
+    - name: Auto Deploy to Coder Staging
+      env:
+        CODER_URL: ${{ secrets.CODER_STAGING_URL }}
+        CODER_TOKEN: ${{ secrets.CODER_STAGING_TOKEN }}
+      run: |
+        coder templates push --yes
+        coder create workspace --template=staging-template --name=auto-staging-${{ github.sha }}
 
-  promote-production:
-    needs: promote-staging
+  auto-promote-prod:
+    needs: auto-promote-staging
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v3
-      - name: Deploy to Production
-        run: |
-          # Add your deployment script/command here
-          echo "Deploying to production environment..."
+    - uses: actions/checkout@v3
+    
+    - name: Auto Deploy to Production
+      run: |
+        echo "Automatically promoting to production environment"
+        terraform init
+        terraform apply -auto-approve -var-file=environments/prod.tfvars
+    
+    - name: Auto Deploy to Coder Prod
+      env:
+        CODER_URL: ${{ secrets.CODER_PROD_URL }}
+        CODER_TOKEN: ${{ secrets.CODER_PROD_TOKEN }}
+      run: |
+        coder templates push --yes
+        coder create workspace --template=prod-template --name=auto-prod-${{ github.sha }}

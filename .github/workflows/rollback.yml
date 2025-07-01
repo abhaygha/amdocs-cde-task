@@ -2,20 +2,42 @@ name: Automated Rollback
 
 on:
   workflow_run:
-    workflows: ["Promote to Staging and Production"]
-    types:
-      - completed
+    workflows: ["Automated Environment Promotion"]
+    types: [ completed ]
 
 jobs:
-  rollback:
+  auto-rollback:
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Rollback to Previous Version
-        run: |
-          PREV_TAG=$(git tag --sort=-creatordate | sed -n 2p)
-          echo "Rolling back to $PREV_TAG"
-          # Add your rollback script/command here, e.g.:
-          # git checkout $PREV_TAG
-          # ./deploy.sh
+    - uses: actions/checkout@v3
+    
+    - name: Auto Rollback
+      run: |
+        echo "Automatically rolling back to previous version"
+        # Get previous successful deployment
+        PREVIOUS_VERSION=$(git describe --tags --abbrev=0 HEAD~1)
+        
+        # Rollback all environments
+        for env in dev staging prod; do
+          terraform init
+          terraform apply -auto-approve -var-file=environments/$env.tfvars -var="version=$PREVIOUS_VERSION"
+        done
+    
+    - name: Auto Notify Rollback
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '   Automated Rollback Executed',
+            body: `A deployment failure triggered an automatic rollback to the previous stable version.
+            
+            - **Failed Version**: ${{ github.sha }}
+            - **Rollback Version**: $PREVIOUS_VERSION
+            - **Time**: ${new Date().toISOString()}
+            
+            Please investigate the deployment failure.`,
+            labels: ['rollback', 'auto-generated', 'urgent']
+          });

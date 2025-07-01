@@ -1,0 +1,45 @@
+name: Automated Versioning
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  auto-version:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Auto Bump Version
+      id: bump
+      uses: phips28/gh-action-bump-version@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag-prefix: 'v'
+        commit-message: 'chore: bump version to {{version}} [skip ci]'
+        default: 'patch'
+    
+    - name: Auto Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.bump.outputs.newTag }}
+        release_name: Release ${{ steps.bump.outputs.newTag }}
+        body: |
+          ## Changes in this Release
+          ${{ steps.bump.outputs.changelog }}
+          
+          ## Automated Deployment
+          This release will be automatically deployed to all environments.
+        draft: false
+        prerelease: false
+    
+    - name: Auto Update Module References
+      run: |
+        # Automatically update all module references to use the new version
+        find . -name "*.tf" -exec sed -i "s/ref=v[0-9]*\.[0-9]*\.[0-9]*/ref=${{ steps.bump.outputs.newTag }}/g" {} \;

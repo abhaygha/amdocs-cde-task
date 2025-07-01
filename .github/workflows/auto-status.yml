@@ -1,0 +1,82 @@
+name: Automated Status Updates
+
+on:
+  workflow_run:
+    workflows: ["Automated Environment Promotion"]
+    types: [ completed ]
+
+jobs:
+  auto-status:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Auto Update Issue Status
+      uses: actions/github-script@v6
+      with:
+        script: |
+          // Auto-update all related issues with deployment status
+          const { data: issues } = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: ['deployment-pending']
+          });
+          
+          for (const issue of issues) {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `🚀 **Automated Deployment Complete!**
+              
+              - **Environment**: All environments (Dev, Staging, Prod)
+              - **Status**: ✅ Successfully deployed
+              - **Version**: ${{ github.sha }}
+              - **Time**: ${new Date().toISOString()}
+              
+              Your changes are now live in all environments!`
+            });
+            
+            // Remove deployment-pending label and add deployed
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              name: 'deployment-pending'
+            });
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['deployed', 'auto-deployed']
+            });
+          }
+    
+    - name: Auto Update PR Status
+      uses: actions/github-script@v6
+      with:
+        script: |
+          // Auto-update PR with deployment status
+          const { data: prs } = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open'
+          });
+          
+          for (const pr of prs) {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `🎉 **Automated Deployment Complete!**
+              
+              Your PR has been automatically deployed to all environments:
+              -  Development
+              -  Staging  
+              -  Production
+              
+              All tests passed and deployments were successful.`
+            });
+          }

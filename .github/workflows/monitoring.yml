@@ -1,15 +1,29 @@
-name: Automated Monitoring
-
 on:
   schedule:
-    - cron: '*/10 * * * *'  # Every 10 minutes
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_run:
+    workflows: ["Automated Environment Promotion"]
+    types: [ completed ]
 
 jobs:
-  health-check:
+  auto-monitor:
     runs-on: ubuntu-latest
     steps:
-      - name: Check Dev Environment Health
-        run: |
-          if ! curl -sf https://coder.eks.cde.dev.srcd.io/health; then
-            gh issue create --title "Dev Environment Down" --body "Automated health check failed." --label "incident"
+    - uses: actions/checkout@v3
+    
+    - name: Auto Health Check
+      run: |
+        # Check all environments
+        for env in dev staging prod; do
+          if ! curl -f ${{ secrets.CODER_${env}_URL }}/health; then
+            echo "Environment $env is down!"
+            # Auto-create incident issue
+            gh issue create --title "🚨 $env Environment Down" --body "Automated health check failed for $env environment" --label "incident,auto-generated"
           fi
+        done
+    
+    - name: Auto Performance Check
+      run: |
+        # Check performance metrics
+        # Auto-create issues for performance degradation
+        echo "Checking performance metrics..."

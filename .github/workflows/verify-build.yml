@@ -1,11 +1,9 @@
 name: Start Workspace On Issue Creation or Comment
-
 on:
   issues:
     types: [opened]
   issue_comment:
     types: [created]
-
 permissions:
   issues: write
 
