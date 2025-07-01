@@ -1,22 +1,36 @@
-name: Verify Build
+name: Start Workspace On Issue Creation or Comment
 
 on:
-  push:
-    branches: [ main, ts-refactor ]
-  pull_request:
-    branches: [ main ]
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
 
 jobs:
-  verify-build:
+  comment:
     runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@coder')) || 
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@coder'))
+    environment: start-ai-workspace
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        
-      - name: Install dependencies
-        run: bun install
-      
-      - name: Verify build is up to date
-        run: bash scripts/verify-build.sh
+      - name: Start Coder workspace
+        uses: abhaygha/amdocs-cde-task@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-username: >-
+            ${{
+              (github.event_name == 'issue_comment' && github.event.comment.user.login) || 
+              (github.event_name == 'issues' && github.event.issue.user.login)
+            }}
+          coder-url: https://coder.eks.cde.dev.srcd.io/
+          coder-token: ${{ secrets.CODER_TOKEN }}
+          template-name: devops-engineer-template
+          parameters: |-
+            Coder Image: codercom/oss-dogfood:latest
+            Coder Repository Base Directory: "~"
+            AI Code Prompt: "Use the gh CLI tool to read the details of issue https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number }} and then address it."
+            Region: us-pittsburgh

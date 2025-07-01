@@ -1,0 +1,21 @@
+name: Automated Rollback
+
+on:
+  workflow_run:
+    workflows: ["Promote to Staging and Production"]
+    types:
+      - completed
+
+jobs:
+  rollback:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Rollback to Previous Version
+        run: |
+          PREV_TAG=$(git tag --sort=-creatordate | sed -n 2p)
+          echo "Rolling back to $PREV_TAG"
+          # Add your rollback script/command here, e.g.:
+          # git checkout $PREV_TAG
+          # ./deploy.sh

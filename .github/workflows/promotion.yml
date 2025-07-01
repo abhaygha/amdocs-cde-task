@@ -1,0 +1,28 @@
+name: Promote to Staging and Production
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  promote-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to Staging
+        run: |
+          # Add your deployment script/command here
+          echo "Deploying to staging environment..."
+
+  promote-production:
+    needs: promote-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to Production
+        run: |
+          # Add your deployment script/command here
+          echo "Deploying to production environment..."
