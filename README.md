@@ -116,3 +116,4 @@ This ensures the Coder API token is only accessible to workflows running on appr
 
 [MIT](LICENSE)
 # Version bump test
+#pipeline updated
