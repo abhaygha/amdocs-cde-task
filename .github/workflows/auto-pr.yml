@@ -2,7 +2,7 @@ name: Automated PR Management
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ main ]
   workflow_run:
     workflows: ["Automated Versioning"]
     types: [ completed ]
