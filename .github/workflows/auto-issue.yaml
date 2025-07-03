@@ -10,28 +10,6 @@ jobs:
   auto-issue:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Auto-create Issues for Breaking Changes
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const { data: commits } = await github.rest.repos.compareCommits({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            base: context.event.before,
-            head: context.event.after
-          });
-          
-          // Auto-create issues for breaking changes
-          for (const commit of commits.commits) {
-            if (commit.commit.message.includes('BREAKING CHANGE')) {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: `Breaking Change: ${commit.commit.message.split('\n')[0]}`,
-                body: `Automatically created for breaking change in commit ${commit.sha}`,
-                labels: ['breaking-change', 'auto-generated']
-              });
-            }
-          }
+      - uses: actions/checkout@v3
+      - name: Debug
+        run: echo "Workflow triggered!"
